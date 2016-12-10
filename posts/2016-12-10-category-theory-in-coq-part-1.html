@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Gaël Deest - Category Theory in Coq - Part 1</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <script type="text/x-mathjax-config">
+         MathJax.Hub.Config({ TeX: { extensions: ["AMScd.js"] }});
+        </script>
+        <link rel="stylesheet" href="../css/highlight/atelier-plateau-light.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <script src="../js/highlight.pack.js"></script>
+        <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Gaël Deest</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <a href="../contact.html">Contact</a>
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Category Theory in Coq - Part 1</h1>
+
+            <div class="info">
+    Posted on December 10, 2016
+    
+        by Gaël Deest
+    
+</div>
+
+<h2 id="prolegomena">Prolegomena</h2>
+<p>In this series, we will explore elementary notions of category theory in the <a href="https://coq.inria.fr">Coq</a> proof assistant. No prior knowledge of Coq or category theory should be required to follow along the definitions and get a general idea of what is going on, but some familiarity with a statically-typed functional programming language is assumed. In particular, due to the nature of the topic, we expect this series to be of particular interest to Haskell programmers.</p>
+<p>Coq being an <em>interactive</em> proof assistant, we strongly encourage the motivated reader to get his hands dirty and try the examples by himself. This is the only way to achieve some reasonable proficiency. Even if you have no interest whatsoever in formal methods, you should still probably give Coq (or another dependently-typed language) a try: delving in a much less constrained type system will help you better understand the limitations of your favorite functional language. Additionally, exposure to the <a href="https://en.wikipedia.org/wiki/Curry%E2%80%93Howard_correspondence">Curry-Howard isomorphism</a> between proofs and programs, that forms the basis of modern proof assistants, will shed a different light on your day-to-day programming tasks and make you a better functional programmer, much like learning Haskell can help an imperative programmer apply saner design principles in his language of choice.</p>
+<h2 id="mathematical-defintion-of-a-category">Mathematical Defintion of a Category</h2>
+<p>We start by recalling the definition of a <a href="https://en.wikipedia.org/wiki/Category_(mathematics)">category</a>. Categories are the proper framework to define and talk about composition. Simply speaking, it consists in a class of points and arrows between those points. Whenever an arrow starts where another ends, we can talk about their <em>composition</em>. We sprinkle a few axioms on top of that intuition to make it a reasonably useful mathematical theory - and that’s about it !</p>
+<p>More formally, a category <span class="math inline">\(\mathcal{C}\)</span> is defined by:</p>
+<ul>
+<li>A class of <em>objects</em> (or <em>points</em>), denoted <span class="math inline">\(\mathrm{ob}(\mathcal{C})\)</span>.</li>
+<li><p>For each pair of objects <span class="math inline">\(a,b: \mathrm{ob}(\mathcal C)\)</span>, a class of directed <em>arrows</em> (or <em>morphisms</em>) between <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span>, written <span class="math inline">\(\mathrm{hom}_{\mathcal C}(a,b)\)</span> (or just <span class="math inline">\(\mathrm{hom}(a,b)\)</span> when the underlying category is clear from context).</p>
+<p>If <span class="math inline">\(f: \mathrm{hom}(a,b)\)</span> is a morphism, <span class="math inline">\(a\)</span> is called its <em>domain</em> and <span class="math inline">\(b\)</span> its <em>codomain</em>.</p></li>
+<li>An identity arrow <span class="math inline">\(\mathrm{id}_{\mathcal C}(x): \mathrm{hom}(x,x)\)</span> (or <span class="math inline">\(\mathrm{id}(x)\)</span>) for each <span class="math inline">\(x: \mathrm{ob}(\mathcal C)\)</span>.</li>
+<li><p>A composition operation, usually written <span class="math inline">\(\circ\)</span> in infix notation, defined between <em>composable</em> arrows. Two arrows <span class="math inline">\(g\)</span> and <span class="math inline">\(f\)</span> are deemed <em>composable</em> if the domain of <span class="math inline">\(g\)</span> is also the codomain of <span class="math inline">\(f\)</span>. For any <span class="math inline">\(a,b,c: \mathrm{ob}(\mathcal C)\)</span>, given a pair of morphisms <span class="math inline">\(g: \mathrm{hom}(b,c)\)</span> and <span class="math inline">\(f: \mathrm{hom}(a,b)\)</span>, we thus have a morphism <span class="math inline">\(g \circ f: \mathrm{hom}(a,c)\)</span>.</p></li>
+</ul>
+<p>The definition of composition might be reminiscent of the composition of functions. That is not an accident: we can (and will) define a category whose objects are <em>sets</em> and morphisms <em>functions</em>. In that category, composition is just the usual composition of functions you know and love. Although that is a good first mental model, please don’t make the mistake of believing that morphisms are always functions of some kind. In spite of its simplicity, the notion of category is much more general than that - that is the root of its beauty and usefulness.</p>
+<p>In addition to the structure we just defined, categories must verify a few intuitive axioms:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Composition is associative:</strong> Whenever <span class="math inline">\(g,f,h\)</span> are suitably composable, <span class="math display">\[h \circ
+   (g \circ f) = (h \circ g) \circ f.\]</span></li>
+<li><strong>Identity is neutral wrt left and right composition:</strong> For any objects <span class="math inline">\(a,  b\)</span> and morphism <span class="math inline">\(f: \mathrm{hom}(a,b)\)</span>, <span class="math display">\[f \circ \mathrm{id}(a) = \mathrm{id}(b) \circ f = f.\]</span></li>
+</ol>
+<h2 id="definition-in-coq">Definition in Coq</h2>
+<p>That definition can be easily translated to a Coq record:</p>
+<pre class="coq"><code>Polymorphic Record Category: Type :=
+  {
+    (* Type of objects. *)
+    ob: Type;
+
+    (* Type constructor of morphisms between two objects. *)
+    hom: ob -&gt; ob -&gt; Type;
+
+    (* Identity. *)
+    id a: hom a a;   
+    
+    (* Composition of arrows. *)
+    comp {a b c}: (hom b c) -&gt; (hom a b) -&gt; (hom a c);
+    
+    (* Associativity of composition. *)
+    comp_assoc:
+      forall a b c d,
+      forall (f: hom a b) (g: hom b c) (h: hom c d),
+        comp h (comp g f) = comp (comp h g) f;
+    
+    (* Identity arrow is neutral with respect to left and right composition. *)
+    id_comp_neutral:
+      forall a b: ob,
+      forall f: hom a b,
+        (comp f (id a) = f) /\ (comp (id b) f = f)
+  }.</code></pre>
+<p>That may be a bit much to swallow all at once, so let us break it down:</p>
+<pre><code>Polymorphic Record Category: Type :=
+  {</code></pre>
+<p>We define a record type <em>Category</em>. Records in Coq are very similar to those offered by Haskell, with a few subtleties we will describe as we proceed. Each field is translated to an accessor function that allows you to extract information without pattern-matching. As for the <em>Polymorphic</em> keyword, it enables <em>universe polymorphism</em> for the type we are defining. If you don’t have a clue of what I am talking about, you can safely ignore it. In fact, it is not necessary for the examples we define in this post <a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>.</p>
+<pre><code>    ob: Type;</code></pre>
+<p>Here, we specify a field <em>obj</em> of type <em>Type</em>, which corresponds to the type of objects of the category. Whenever we have a category <em>C: Category</em>, we can retrieve the type of its objects with <em>ob C</em>.</p>
+<pre><code>    hom: ob -&gt; ob -&gt; Type;</code></pre>
+<p>The field <em>hom</em> is a type constructor taking two elements of type <em>ob</em> and returning the <em>Type</em> of arrows between those objects. One syntactic (but important) remark: in this context, <em>ob</em> is not a function of type <em>Category -&gt; Type</em> ; it simply refers to the value of the field in the same category. So, for any category <em>C: Category</em>, <em>hom C</em> has type: <em>ob C -&gt; ob C -&gt; Type</em>.</p>
+<p>In general, the definition of a record field may depend on previously defined fields in the same record.</p>
+<pre><code>    comp {a b c}: (hom b c) -&gt; (hom a b) -&gt; (hom a c);</code></pre>
+<p>This is a function field defining the composition of two composable arrows. Note that composability is encoded in the type: there is no way to compose two morphisms whose domain and codomain don’t match. As for the variables <em>a</em>, <em>b</em>, <em>c</em> we don’t need to specify their type: it can be automatically inferred as <em>ob</em> by Coq from the use of <em>hom</em>.</p>
+<p>You may be confused by the position of <em>a</em>, <em>b</em> and <em>c</em> to the left of the colon (<em>:</em>) character. It allows us to easily refer to those variables in the remaining of the type. A more verbose but mostly equivalent way to define that field would be:</p>
+<pre><code>    comp: forall (a b c: ob), (hom b c) -&gt; (hom a b) -&gt; (hom a c)</code></pre>
+<p>That weird function type is a <a href="https://en.wikipedia.org/wiki/Dependent_type#Formal_definition"><em>dependent product type</em></a>. It allows the return type of a function to depend on the <em>value</em> of its arguments. Conceptually, our <em>comp</em> operation does hence take five arguments, and not two, the first three ones defining the domains and codomains of the composed arrows.</p>
+<p>Finally, the curly braces around <em>a b c</em> define these arguments as implicit: whenever possible from context, we ask Coq to infer them automatically. Coq features many such facilities. While they may be be daunting at first and make Coq programs hard to understand for a novice, they can greatly improve readability.</p>
+<p>That implicitness is limited to the rest of the definition, though. For a reason I don’t fully understand, arguments <em>a</em>, <em>b</em> and <em>c</em> are <em>explicit</em> outside that scope.</p>
+<p>We now proceed to define the axioms of a category:</p>
+<pre><code>    comp_assoc:
+      forall a b c d,
+      forall (f: hom a b) (g: hom b c) (h: hom c d),
+        comp h (comp g f) = comp (comp h g) f;</code></pre>
+<p>Here, <em>a, b, c</em> and <em>d</em> are objects of type <em>ob</em> and <em>f, g, h</em> morphisms between those objects. The definition of this axiom closely follows the one we gave above: <span class="math display">\[h \circ (g \circ f) = (h \circ g) \circ f.\]</span> In fact, we could have defined syntactic sugar to write exactly that. For now, though, we will avoid this kind of magic.</p>
+<p>Notice that the <em>forall</em> keyword is the same used to define a dependent product type. In fact, that is exactly what it is. We will come back to this in a minute.</p>
+<p>Finally, we state that identities are neutral elements for composition:</p>
+<pre><code>    id_comp_neutral:
+      forall a b: ob,
+      forall f: hom a b,
+        (comp f (id a) = f) /\ (comp (id b) f = f)
+  }</code></pre>
+<h2 id="first-example-the-rm-ssmall-et-category">First example: the <span class="math inline">\({\rm S{\small ET}}\)</span> Category</h2>
+<p>The category <span class="math inline">\({\rm S{\small ET}}\)</span> where objects are sets and morphisms functions is probably the simplest example of a category. Let us first summarise how it maps to our definition:</p>
+<ul>
+<li>Objects have type <em>Set</em>.</li>
+<li>Arrows between two sets <em>A</em> and <em>B</em> are functions of type <em>A -&gt; B</em>.</li>
+<li>The identity arrow of set <em>A</em> is the function that maps each element to itself.</li>
+<li>Composition of arrows is simply composition of functions.</li>
+</ul>
+<p>That should be simple enough to implement. Let’s start by defining the identities and composition as separate functions:</p>
+<pre class="coq"><code>Definition set_id (A:Set): (A -&gt; A) := fun a =&gt; a.
+
+Definition set_compose {A B C: Set} (g: B -&gt; C) (f: A -&gt; B) := fun x =&gt; g (f x).</code></pre>
+<p>So, <em>set_id</em> takes a <em>Set</em> and returns the identity function for that <em>Set</em>, while <em>set_compose</em> takes three <em>Sets</em>, two functions between them and returns their composition. Since the <em>Set</em> arguments can easily be inferred from the type of functions <em>g</em> and <em>f</em>, we define them as implicit to remove clutter. Easy enough !</p>
+<p>Now, we have to actually prove the category axioms. We do so by definining and proving two lemmas, <em>set_comp_assoc</em> and <em>set_id_comp_neutral</em>. The statement of our lemmas are immediately followed by their proof, which, in this occasion, can be automatically built for us by Coq using the <em>auto</em> tactic.</p>
+<pre class="coq"><code>(* Composition of functions is associative. *)
+Lemma set_comp_assoc: forall (a b c d: Set), forall (f: a -&gt; b) (g: b -&gt; c) (h: c -&gt; d),
+      set_compose h (set_compose g f) = set_compose (set_compose h g) f.
+  auto.
+Qed.
+
+(* An identity function is a neutral element for left and right composition. *)
+Lemma set_id_comp_neutral: forall a b: Set, forall f: a -&gt; b,
+      set_compose f (set_id a) = f /\ set_compose (set_id b) f = f.
+  auto.
+Qed.</code></pre>
+<p>Let us reflect a bit more on what is going on here. Stating a lemma (or a theorem) and giving its proof is actually <em>exactly the same thing</em> as defining a type <em>and</em> a value of that type. That’s the core of the Curry-Howard isomorphism: proofs and programs are just the same concept seen from different viewpoints. An element: <em>x: T</em> is a proof of <em>T</em>, seen as a proposition. That’s why types and propositions can both be built with <em>forall</em>, seen in one case as a dependent product, in the other, as the usual universal quantifier, <span class="math inline">\(\forall\)</span>. In fact, there is absolutely no difference.</p>
+<p>Actually, instead of using <em>Lemma</em> and the tactic language, could have defined our proof as a function taking all the variables involved in the theorem as a arguments and returning an equality proof:</p>
+<pre class="coq"><code>Definition set_comp_assoc: forall (a b c d: Set), forall (f: a -&gt; b) (g: b -&gt; c) (h: c -&gt; d),
+      set_compose h (set_compose g f) = set_compose (set_compose h g) f :=
+  fun a b c d f g h  =&gt; eq_refl (set_compose h (set_compose g f)).</code></pre>
+<p>The details of that (very short) proof are not that important. I just want to stress out that, while Coq offers a lot of syntactic sugar, the underlying theory is just a very small, very flexible kernel where proofs and programs are one and the same.</p>
+<p>Well, almost the same. In Coq, there is a subtle difference between propositions and conventional types: by construction, the type (or kind, if you wish) of a proposition is <em>Prop</em>. This is just a nifty trick used to ensure that proofs can be fully erased when extracting Coq programs to OCaml or Haskell<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>. But it is more of practical than theoretical importance.</p>
+<p>Finally, we have all the ingredients to build our first category:</p>
+<pre class="coq"><code>Definition SET : Category :=
+  {|
+    ob              := Set;
+    hom             := fun a b =&gt; a -&gt; b;
+    id              := set_id;
+    comp            := @set_compose;
+    comp_assoc      := set_comp_assoc;
+    id_comp_neutral := set_id_comp_neutral
+  |}.</code></pre>
+<p>Hooray ! The @ before <em>set_compose</em> is just there to make all arguments explicit in <em>set_compose</em> and make its type match with comp (recall that all <em>comp</em> arguments are explicit outside the definition of the record). Other than that, everything should be pretty obvious.</p>
+<p>In the next parts, we will define some more interesting examples such as Kleisli categories, and the category of categories (!), along with the corresponding morphisms: functors !</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>It will be, in the next part. Stay tuned !<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>See <a href="https://www.irif.fr/~letouzey/download/letouzey_extr_cie08.pdf">this paper</a> for more information.<a href="#fnref2">↩</a></p></li>
+</ol>
+</div>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+    <script type="text/javascript">hljs.initHighlightingOnLoad();</script>
+</html>
